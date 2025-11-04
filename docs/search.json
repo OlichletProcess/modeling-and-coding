@@ -1,0 +1,100 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "",
+    "text": "Welcome"
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html",
+    "href": "bayesian_statistical_modeling_examples.html",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "",
+    "text": "Thank you very much for tuning in.\nBellow are examples of Bayesian statistical modeling with mathematical equation and its Stan coding (There’s also additional model using brms package in R).\nHere we have variables called “tightness” and “X1” in our models."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#mathematical-equation",
+    "href": "bayesian_statistical_modeling_examples.html#mathematical-equation",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "1.1 Mathematical equation",
+    "text": "1.1 Mathematical equation\n\\[\n\\begin{pmatrix}\n\\text{tightness}_i \\\\\nX1_i\n\\end{pmatrix}\n\\sim \\mathcal{N}\\!\\left(\n\\begin{pmatrix}\n\\mu_{\\text{tight}} \\\\\n\\mu_{X1}\n\\end{pmatrix},\n\\begin{pmatrix}\n\\sigma^2_{\\text{tight}} & \\rho \\,\\sigma_{\\text{tight}}\\sigma_{X1} \\\\\n\\rho \\,\\sigma_{\\text{tight}}\\sigma_{X1} & \\sigma^2_{X1}\n\\end{pmatrix}\n\\right)\n\\]\ni represents the index of countries or states.\n\\(tightness\\) and \\(X_1\\) represent the variables which follow a bivariate normal distribution.\n\\(\\mu_{\\text{tight}}\\) and \\(\\mu_{X1}\\) respectively represent the means of \\(tightness_i\\) and \\(X_{1i}\\).\n\\(\\sigma^2_{\\text{tight}}\\) and \\(\\sigma^2_{X1}\\) are the variances of \\(tightness_i\\) and \\(X_{1i}\\).\n\\(\\rho\\) is the correlation coefficient between \\(tightness_i\\) and \\(X_{1i}\\).\nWe assumed independence across \\(i\\) observations and estimated the parameters\n\\(\\mu_{\\text{tight}}\\), \\(\\mu_{X1}\\), \\(\\sigma^2_{\\text{tight}}\\), \\(\\sigma^2_{X1}\\), and \\(\\rho\\)."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#stan-code",
+    "href": "bayesian_statistical_modeling_examples.html#stan-code",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "1.2 Stan code",
+    "text": "1.2 Stan code\ndata {\n  int&lt;lower=1&gt; N;\n  array[N] vector[2] y;\n\n  vector[2] mu_prior_mean;\n  vector&lt;lower=0&gt;[2] mu_prior_sd;\n  vector&lt;lower=0&gt;[2] sigma_prior;\n  real&lt;lower=1&gt; eta;\n}\n\nparameters {\n  vector[2] mu;\n  vector&lt;lower=0&gt;[2] sigma;\n  cholesky_factor_corr[2] rho;\n}\n\ntransformed parameters {\n  matrix[2,2] L_Sigma = diag_pre_multiply(sigma, rho);\n}\n\nmodel {\n  mu ~ normal(mu_prior_mean, mu_prior_sd);\n  sigma ~ exponential(sigma_prior);\n  rho ~ lkj_corr_cholesky(eta);\n\n    y ~ multi_normal_cholesky(mu, L_Sigma);\n}\n\ngenerated quantities {\n  array[N] vector[2] y_rep;\n  for (n in 1:N) {\n    y_rep[n] = multi_normal_cholesky_rng(mu, L_Sigma);\n  }\n}"
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#mathematical-equation-1",
+    "href": "bayesian_statistical_modeling_examples.html#mathematical-equation-1",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "2.1 Mathematical equation",
+    "text": "2.1 Mathematical equation\n\\[\n\\begin{aligned}\n\\text{tightness}_i &\\sim \\text{Normal}(\\mu_i, \\sigma) \\\\\n\\mu_i &= \\beta_0 + \\beta_1 X1_i \\\\[6pt]\n\\beta_0 &\\sim \\text{Normal}(\\mu_{\\beta_0}, \\tau_{\\beta_0}) \\\\\n\\beta_1 &\\sim \\text{Normal}(\\mu_{\\beta_1}, \\tau_{\\beta_1}) \\\\\n\\sigma &\\sim \\text{Exponential}(\\lambda)\n\\end{aligned}\n\\]\n\\(tightness_i\\) is predicted by \\(X_{1i}\\), and \\(\\mu_i\\) is the expected value of \\(tightness_i\\).\nWhile \\(\\beta_0\\) represents the intercept, \\(\\beta_1\\) represents the slope coefficient.\n\\(\\sigma\\) is the residual standard deviation.\nIt is assumed that \\(\\beta_0\\) and \\(\\beta_1\\) are sampled from normal distributions whose means and standard deviations are \\(\\mu_\\beta\\) and \\(\\tau_\\beta\\), respectively.\nThe values of \\(X_1\\), \\(\\beta_0\\), \\(\\beta_1\\), \\(\\mu_\\beta\\), \\(\\tau_\\beta\\), and \\(\\sigma\\) were estimated as parameters."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#stan-code-1",
+    "href": "bayesian_statistical_modeling_examples.html#stan-code-1",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "2.2 Stan code",
+    "text": "2.2 Stan code\ndata {\n  int&lt;lower=1&gt; N;\n  vector[N] X1;\n  vector[N] tightness;\n  int&lt;lower=0, upper=1&gt; prior_only;\n\n  real mu_alpha;\n  real&lt;lower=0&gt; tau_alpha;\n  real mu_beta;\n  real&lt;lower=0&gt; tau_beta;\n  real&lt;lower=0&gt; lambda;\n}\n\nparameters {\n  real alpha;\n  real beta;\n  real&lt;lower=0&gt; sigma;\n}\n\nmodel {\n vector[N] mu;\n mu = alpha + beta*X1;\n\n  alpha ~ normal(mu_alpha, tau_alpha);\n  beta ~ normal(mu_beta, tau_beta);\n  sigma ~ exponential(lambda);\n\nif (prior_only == 0) {\n  tightness ~ normal(mu, sigma);\n    }\n}\n\ngenerated quantities {\n  vector[N] y_ppc;\n  for (n in 1:N) {\n    y_ppc[n] = normal_rng(alpha + beta * X1[n], sigma);\n  }\n}"
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#mathematical-equation-2",
+    "href": "bayesian_statistical_modeling_examples.html#mathematical-equation-2",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "3.1 Mathematical equation",
+    "text": "3.1 Mathematical equation\n\\[\n\\begin{aligned}\n\\text{tightness}_i &\\sim \\text{Normal}(\\mu_i, \\sigma) \\\\\n\\mu_i &= \\alpha_{\\text{Region}[i]} + \\beta_1 X1_i \\\\[10pt]\n\\alpha_{\\text{Region}} &\\sim \\text{Normal}(\\mu_\\alpha, \\tau_\\alpha) \\\\\n\\beta_1 &\\sim \\text{Normal}(\\mu_{\\beta_1}, \\tau_{\\beta_1}) \\\\\n\\mu_\\alpha &\\sim \\text{Normal}(\\mu_0, \\tau_0) \\\\\n\\tau_\\alpha &\\sim \\text{Exponential}(\\lambda_\\alpha) \\\\\n\\sigma &\\sim \\text{Exponential}(\\lambda_\\sigma)\n\\end{aligned}\n\\]\n\\(tightness_i\\) is predicted by \\(X_{1i}\\), and \\(\\mu_i\\) is the expected value of \\(tightness_i\\).\n\\(\\sigma\\) is the residual standard deviation.\n\\(\\alpha_{\\text{Region}[i]}\\) is the intercept specific to each \\(\\text{Region}[i]\\), and \\(\\beta_1\\) is the fixed-effect slope coefficient.\n\\(\\mu_a\\) and \\(\\tau_a\\) are the hyperparameters of \\(\\alpha_{\\text{Region}}\\).\nThe values of \\(X_1\\), \\(\\alpha_{\\text{Region}}\\), \\(\\beta_1\\), \\(\\mu_a\\), \\(\\tau_a\\), \\(\\mu_\\beta\\), \\(\\tau_\\beta\\), \\(\\mu_0\\), \\(\\tau_0\\), and \\(\\sigma\\) were estimated as parameters.\n\\(\\mu_a\\), \\(\\mu_\\beta\\), and \\(\\mu_0\\) were assigned normal distributions, while \\(\\tau_a\\) and \\(\\sigma\\) were assigned exponential distributions."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#stan-code-2",
+    "href": "bayesian_statistical_modeling_examples.html#stan-code-2",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "3.2 Stan code",
+    "text": "3.2 Stan code\ndata {\n  int&lt;lower=1&gt; N;\n  int&lt;lower=1&gt; R;\n  array[N] int&lt;lower=1, upper=R&gt; region;\n  vector[N] X1;\n  vector[N] tightness;\n  int&lt;lower=0, upper=1&gt; prior_only;\n\n  real mu_alpha_bar;\n  real tau_alpha_bar;\n  real mu_beta;\n  real tau_beta;\n  real&lt;lower=0&gt; lambda_alpha;\n  real&lt;lower=0&gt; lambda_sigma;\n}\n\nparameters {\n  real alpha_bar;\n  real&lt;lower=0&gt; alpha_sigma;\n  vector[R] alpha_raw;\n  real beta;\n  real&lt;lower=0&gt; sigma;\n}\n\ntransformed parameters {\n  vector[R] alpha;\n  alpha = alpha_bar + alpha_sigma * alpha_raw;\n}\n\nmodel {\n  beta ~ normal(mu_beta, tau_beta);\n  alpha_bar ~ normal(mu_alpha_bar, tau_alpha_bar);\n  alpha_sigma ~ exponential(lambda_alpha);\n  alpha_raw ~ normal(0, 1);\n  sigma ~ exponential(lambda_sigma);\n\n  if (prior_only == 0) {\n    tightness ~ normal(alpha[region] + beta * X1, sigma);\n   }\n}\n\ngenerated quantities {\n  vector[N] y_ppc;\n  for (i in 1:N) {\n    y_ppc[i] = normal_rng(alpha[region[i]] + beta * X1[i], sigma);\n  }\n}"
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#mathematical-equation-3",
+    "href": "bayesian_statistical_modeling_examples.html#mathematical-equation-3",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "4.1 Mathematical equation",
+    "text": "4.1 Mathematical equation\n\\[\n\\begin{aligned}\n\\text{tightness}_i &\\sim \\text{Normal}(\\mu_i, \\sigma) \\\\\n\\mu_i &= \\alpha_{\\text{Region}[i]} + \\beta_{\\text{Region}[i]} X1_i \\\\[10pt]\n\\begin{bmatrix}\n\\alpha_{\\text{Region}} \\\\\n\\beta_{\\text{Region}}\n\\end{bmatrix}\n&\\sim \\text{MVNormal}\n\\left(\n\\begin{bmatrix}\n\\alpha_0 \\\\\n\\beta_0\n\\end{bmatrix},\n\\mathbf{S}\n\\right) \\\\[10pt]\n\\mathbf{S} &=\n\\begin{pmatrix}\n\\sigma_\\alpha & 0 \\\\\n0 & \\sigma_\\beta\n\\end{pmatrix}\n\\mathbf{R}\n\\begin{pmatrix}\n\\sigma_\\alpha & 0 \\\\\n0 & \\sigma_\\beta\n\\end{pmatrix} \\\\[10pt]\n\\alpha_0 &\\sim \\text{Normal}(\\mu_{\\alpha_0}, \\tau_{\\alpha_0}) \\\\\n\\beta_0 &\\sim \\text{Normal}(\\mu_{\\beta_0}, \\tau_{\\beta_0}) \\\\\n\\sigma_\\alpha &\\sim \\text{Exponential}(\\lambda_\\alpha) \\\\\n\\sigma_\\beta &\\sim \\text{Exponential}(\\lambda_\\beta) \\\\\n\\mathbf{R} &\\sim \\text{LKJcorr}(\\eta) \\\\\n\\sigma &\\sim \\text{Exponential}(\\lambda_\\sigma)\n\\end{aligned}\n\\]\n\\(\\alpha_{\\text{Region}[i]}\\) is the region-specific intercept, and \\(\\beta_{\\text{Region}[i]}\\) is the region-specific slope for predictor \\(X_{1i}\\).\n\\(\\mu_i\\) is the expected value of \\(tightness_i\\), and \\(\\sigma\\) is the residual standard deviation.\nWe modeled the random effects \\(\\alpha_{\\text{Region}}\\) and \\(\\beta_{\\text{Region}}\\) jointly as draws from a bivariate normal distribution.\nThe covariance matrix \\(\\mathbf{S}\\) was decomposed into standard deviations and a correlation matrix \\(\\mathbf{R}\\).\n\\(\\mathbf{R} \\sim \\mathrm{LKJcorr}(\\eta)\\) represents the correlation matrix between the region-specific intercepts and slopes,\nwhile \\(\\sigma_\\alpha\\) and \\(\\sigma_\\beta\\) are their respective standard deviations.\nThe values of \\(X_1\\), \\(\\alpha_{\\text{Region}}\\), \\(\\beta_{\\text{Region}}\\), \\(\\alpha_0\\), \\(\\beta_0\\), \\(\\mu_a\\), \\(\\tau_a\\), \\(\\mu_\\beta\\), \\(\\tau_\\beta\\), \\(\\mu_0\\), \\(\\tau_0\\), and \\(\\sigma\\) were estimated as parameters.\n\\(\\alpha_0\\) and \\(\\beta_0\\) were assigned normal distributions.\n\\(\\sigma_\\alpha\\), \\(\\sigma_\\beta\\), and \\(\\sigma\\) were assigned exponential distributions."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#stan-code-3",
+    "href": "bayesian_statistical_modeling_examples.html#stan-code-3",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "4.2 Stan code",
+    "text": "4.2 Stan code\ndata {\n  int&lt;lower=1&gt; N;\n  int&lt;lower=1&gt; R;\n  array[N] int&lt;lower=1, upper=R&gt; region;\n  vector[N] X1;\n  vector[N] tightness;\n  int&lt;lower=0,upper=1&gt; prior_only;\n\n  real mu_alpha;\n  real tau_alpha;\n  real mu_beta;\n  real tau_beta;\n  real&lt;lower=0&gt; lambda_alpha;\n  real&lt;lower=0&gt; lambda_beta;\n  real&lt;lower=0&gt; lambda_sigma;\n}\n\nparameters {\n  real a;\n  real b;\n  real&lt;lower=0&gt; sigma;\n\n  vector&lt;lower=0&gt;[2] sigma_region;\n  cholesky_factor_corr[2] L_Rho;\n\n  matrix[2, R] z;\n}\n\ntransformed parameters {\n  matrix[2, R] dev = diag_pre_multiply(sigma_region, L_Rho) * z;\n\n  vector[R] a_region = rep_vector(a, R) + dev[1]';\n  vector[R] b_region = rep_vector(b, R) + dev[2]';\n}\n\nmodel {\n  vector[N] mu;\n  a ~ normal(mu_alpha, tau_alpha);\n  b ~ normal(mu_beta,  tau_beta);\n  sigma ~ exponential(lambda_sigma);\n  sigma_region[1] ~ exponential(lambda_alpha);\n  sigma_region[2] ~ exponential(lambda_beta);\n  L_Rho ~ lkj_corr_cholesky(4);\n  to_vector(z) ~ normal(0, 1);\n\n  for (n in 1:N) {\n    mu[n] = a_region[region[n]] + b_region[region[n]] * X1[n];\n  }\n  if (prior_only == 0) {\n  tightness ~ normal(mu, sigma);\n  }\n}\n\ngenerated quantities {\n  corr_matrix[2] Rho_out = multiply_lower_tri_self_transpose(L_Rho);\n\n  vector[N] y_ppc;\n  for (n in 1:N)\n    y_ppc[n] = normal_rng(a_region[region[n]] + b_region[region[n]] * X1[n], sigma);\n}"
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#mathematical-equation-4",
+    "href": "bayesian_statistical_modeling_examples.html#mathematical-equation-4",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "5.1 Mathematical equation",
+    "text": "5.1 Mathematical equation\n\\[\n\\begin{aligned}\n\\text{tightness}_i &\\sim \\text{Normal}(\\mu_i, \\sigma) \\\\\n\\mu_i &= \\alpha + \\gamma_{\\text{Phylogeny}[i]} + \\beta X1_i \\\\[10pt]\n\\boldsymbol{\\gamma} &\\sim \\text{MVNormal}(\\mathbf{0}, \\mathbf{K}) \\\\\nK_{ij} &= \\eta^2 \\exp\\!\\left( -\\rho^2 D_{ij}^2 \\right) + \\delta_{ij}\\epsilon \\\\[10pt]\n\\alpha &\\sim \\text{Normal}(\\mu_\\alpha, \\tau_\\alpha) \\\\\n\\beta &\\sim \\text{Normal}(\\mu_\\beta, \\tau_\\beta) \\\\\n\\eta &\\sim \\text{Exponential}(\\lambda_\\eta) \\\\\n\\rho &\\sim \\text{Exponential}(\\lambda_\\rho) \\\\\n\\sigma &\\sim \\text{Exponential}(\\lambda_\\sigma)\n\\end{aligned}\n\\]\n\\(tightness_i\\) is the observed outcome for the national unit, and \\(X_{1i}\\) is the predictor variable.\n\\(\\alpha\\) is the intercept, and \\(\\beta\\) is the fixed-effect slope.\nImportantly, \\(\\gamma_{\\text{Phylogeny}[i]}\\) is a structured random effect drawn from a Gaussian Process, and \\(\\sigma\\) is the residual standard deviation.\nThe vector of structured effects \\(\\boldsymbol{\\gamma}\\) is modeled as a multivariate normal distribution.\nThe covariance matrix \\(\\mathbf{K}\\) is constructed using a Radial Basis Function (RBF) kernel, which defines the pairwise similarity between units \\(i\\) and \\(j\\) based on their distance:\n\\[\n\\begin{aligned}\nK_{ij} &= \\eta^2 \\exp\\!\\left( -\\rho^2 D_{ij}^2 \\right) + \\delta_{ij}\\epsilon \\\\\n\\end{aligned}\n\\]\nIn this kernel, \\(\\eta\\) is the marginal standard deviation of the Gaussian Process, and \\(\\rho\\) is the length-scale parameter controlling how correlation decays with increasing or decreasing distance.\n\\(D_{ij}\\) represents the distance between units \\(i\\) and \\(j\\), and \\(\\epsilon\\) is a small positive constant added to the diagonal through \\(\\delta_{ij}\\), the Kronecker delta (jitter), to improve numerical stability.\nThe values of \\(X_1\\), \\(\\alpha\\), \\(\\beta\\), \\(\\eta\\), \\(\\rho\\), and \\(\\sigma\\) were estimated as parameters.\nThe parameters \\(\\alpha\\) and \\(\\beta\\) were assigned normal distributions, while the hyperparameters \\(\\eta\\), \\(\\rho\\), and the residual standard deviation \\(\\sigma\\) were assigned exponential distributions."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#stan-code-4",
+    "href": "bayesian_statistical_modeling_examples.html#stan-code-4",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "5.2 Stan code",
+    "text": "5.2 Stan code\n  data { int&lt;lower=1&gt; N;\n  vector[N] tightness;\n  vector[N] X1;\n  matrix[N, N] D;\n\n  real mu_alpha;\n  real tau_alpha;\n    real mu_beta;\n  real tau_beta;\n    real&lt;lower=0&gt; s_eta;\n  real&lt;lower=0&gt; s_rho;\n  real&lt;lower=0&gt; lambda_sigma;\n  int&lt;lower=0, upper=1&gt; prior_only;\n  }\n\n  transformed data {\n    real delta = 1e-8;\n    }\n\nparameters {\n    real alpha;\n    real beta;\n    real&lt;lower=0&gt; eta;\n    real&lt;lower=0&gt; rho;\n    real&lt;lower=0&gt; sigma;\n    vector[N] gamma;\n}\n\nmodel {\n  matrix[N, N] K;\n  for (i in 1:N) {\n    K[i, i] = square(eta) + delta;\n    for (j in (i+1):N) {\n      real d = D[i, j];\n      K[i, j] = square(eta) * exp( - square(rho) * square(d) );\n      K[j, i] = K[i, j]; }\n      }\n\n      gamma ~ multi_normal(rep_vector(0, N), K);\n      alpha ~ normal(mu_alpha, tau_alpha);\n      beta ~ normal(mu_beta, tau_beta);\n      eta ~ normal(0, s_eta);\n      rho ~ normal(0, s_rho);\n      sigma ~ exponential(lambda_sigma);\n      vector[N] mu;\n      for (i in 1:N) {\n        mu[i] = alpha + beta * X1[i] + gamma[i]; }\n\n        if (prior_only == 0) {\n          tightness ~ normal(mu, sigma);\n          }\n}\n\ngenerated quantities {\n  vector[N] y_rep; for (i in 1:N) {\n    y_rep[i] = normal_rng(alpha + gamma[i] + beta * X1[i], sigma);\n    }\n  }"
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#mathematical-equation-5",
+    "href": "bayesian_statistical_modeling_examples.html#mathematical-equation-5",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "Mathematical equation",
+    "text": "Mathematical equation\n\\[\n\\begin{aligned}\ny_i &\\sim \\mathrm{Normal}(\\mu_i, \\sigma) \\\\[4pt]\n\\mu_i &= \\alpha + \\beta_1\\,\\text{Contact}_i + \\beta_2\\,\\text{Law}_i\n        + u^{\\text{geo}}_{j[i]} + u^{\\text{phy}}_{k[i]} \\\\[6pt]\n\\mathbf{u}^{\\text{geo}} &\\sim \\mathrm{MVN}(\\mathbf{0}, \\mathbf{\\Sigma_G}) \\\\[4pt]\n\\mathbf{u}^{\\text{phy}} &\\sim \\mathrm{MVN}(\\mathbf{0}, \\mathbf{\\Sigma_S}) \\\\[6pt]\n\\alpha &\\sim \\mathrm{Normal}(0, \\delta_\\alpha) \\\\[4pt]\n\\beta_1 &\\sim \\mathrm{Normal}(0, \\delta_{\\beta_1}) \\\\[4pt]\n\\beta_2 &\\sim \\mathrm{Normal}(0, \\delta_{\\beta_2}) \\\\[6pt]\n\\delta_{\\beta_1},\\, \\delta_{\\beta_2} &\\sim \\mathrm{Exponential}(\\lambda_\\beta) \\\\[4pt]\n\\sigma &\\sim \\mathrm{Exponential}(\\lambda_\\sigma)\n\\end{aligned}\n\\]\n\\(y_i\\) represents the outcome variable (e.g., justifiability of LGB) for individual \\(i\\),\nand \\(Contact_i\\) and \\(Law_i\\) are the individual- and country-level predictors, respectively.\n\\(\\alpha\\) is the overall intercept, while \\(\\beta_1\\) and \\(\\beta_2\\) represent the fixed-effect slopes for \\(Contact_i\\) and \\(Law_i\\).\nImportantly, \\(u^{\\text{geo}}_{j[i]}\\) and \\(u^{\\text{phy}}_{k[i]}\\) are structured random effects capturing country-level dependencies\nbased on geographic and phylogenetic proximity, respectively.\nEach random-effect vector, \\(\\mathbf{u}^{\\text{geo}}\\) and \\(\\mathbf{u}^{\\text{phy}}\\),\nis modeled as a multivariate normal distribution with zero mean and covariance matrices \\(\\boldsymbol{\\Sigma_G}\\) and \\(\\boldsymbol{\\Sigma_S}\\).\nThese covariance matrices represent the spatial correlation structure across countries, derived from geographic distance and cultural/phylogenetic similarity matrices."
+  },
+  {
+    "objectID": "bayesian_statistical_modeling_examples.html#brms-code",
+    "href": "bayesian_statistical_modeling_examples.html#brms-code",
+    "title": "Bayesian Statistical Modeling Examples",
+    "section": "brms code",
+    "text": "brms code\nmodel &lt;- brm(\n  formula = outcome ~ contact + law +\n    (1 | gr(country_geo, cov = G, id = \"geo\")) +\n    (1 | gr(country_phy, cov = S, id = \"phy\")) ,\n  data = data,\n  data2 = list(G = G_pd, S = S_pd),\n  family = gaussian(),\n  prior = c(\n    prior(normal(0,1), class = Intercept),\n    prior(normal(0,1), class = b),\n    prior(exponential(2), class = sd),\n    prior(exponential(1), class = sigma)),\n  chains = 4, cores = 4, iter = 5000, warmup = 1000\n)"
+  }
+]

@@ -1,0 +1,17 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Bayesian Statistical Modeling with code and equation examples"
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    math: katex
+    theme: cosmo
+    highlight-style: breeze
+    code-block-bg: true
+  pdf: default
